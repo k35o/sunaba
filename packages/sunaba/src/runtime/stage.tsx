@@ -210,6 +210,30 @@ export const mountStage = async (input: StageInput): Promise<void> => {
   // Passive pages (e.g. gallery tiles) render their URL but never join the
   // live-stage session; the fragment keeps this out of the address grammar.
   const passive = location.hash === "#passive";
+
+  // Humans landing on a bare /render page (pasted permalinks, "open" links)
+  // get a quiet way back to the workbench chrome; embedded stages do not.
+  if (!passive && window.self === window.top) {
+    try {
+      const parsed = parseAddress(new URL(location.href));
+      const params = new URLSearchParams();
+      for (const [axis, value] of Object.entries(parsed.env ?? {})) {
+        params.set(`env.${axis}`, value);
+      }
+      const chip = document.createElement("a");
+      const query = params.size > 0 ? `?${params.toString()}` : "";
+      chip.href = `/${query}#/story/${parsed.story}`;
+      chip.textContent = "\u2302 workbench";
+      chip.style.cssText =
+        "position:fixed;right:16px;bottom:16px;z-index:2147483647;" +
+        "font:500 12px/1 system-ui,sans-serif;color:#697280;background:#fff;" +
+        "padding:8px 14px;border-radius:999px;text-decoration:none;" +
+        "box-shadow:0 4px 16px rgb(25 35 45 / 0.14);";
+      document.body.appendChild(chip);
+    } catch {
+      // Not a render URL (should not happen) — skip the chip.
+    }
+  }
   const connection = passive
     ? undefined
     : new StageConnection((message) => {

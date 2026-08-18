@@ -241,6 +241,9 @@ ${SHARED_CSS}
   var entries = Object.values(data.index.entries);
   var byId = data.index.entries;
   var envState = {};
+  new URLSearchParams(location.search).forEach(function (value, key) {
+    if (key.indexOf("env.") === 0) envState[key.slice(4)] = value;
+  });
   var currentId = null;
   var frame = document.getElementById("stage");
   var statusBox = document.getElementById("status");
@@ -534,7 +537,7 @@ ${SHARED_CSS}
       location.origin + "/render/" + entry.id + (query ? "?" + query : "") + "#passive";
     var caption = document.createElement("figcaption");
     var link = document.createElement("a");
-    link.href = "/render/" + entry.id + (query ? "?" + query : "");
+    link.href = "/" + (query ? "?" + query : "") + "#/story/" + entry.id;
     link.textContent = entry.name;
     var title = document.createElement("span");
     title.className = "title";
