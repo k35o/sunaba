@@ -1,52 +1,18 @@
 {
-  "name": "sunaba",
-  "version": "0.0.0",
-  "description": "AI-native component workbench for React",
-  "keywords": [],
-  "homepage": "https://github.com/k35o/sunaba#readme",
-  "bugs": "https://github.com/k35o/sunaba/issues",
-  "license": "MIT",
-  "author": "k8o (https://github.com/k35o)",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/k35o/sunaba.git"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
-  ],
+  "name": "sunaba-workspace",
+  "private": true,
   "type": "module",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "scripts": {
-    "build": "vp pack",
-    "test": "vp test",
-    "lint": "vp lint",
-    "fmt": "vp fmt",
+    "build": "pnpm --filter sunaba build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
     "check": "vp check",
     "check:write": "vp check --fix",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
+    "prepare": "vp config"
   },
   "devDependencies": {
-    "@k8o/oxc-config": "0.1.3",
-    "@types/node": "26.1.1",
-    "typescript": "6.0.3",
-    "vite-plus": "0.2.4"
+    "sunaba": "workspace:*",
+    "vite-plus": "catalog:"
   },
   "engines": {
     "node": ">=24.13.0"
