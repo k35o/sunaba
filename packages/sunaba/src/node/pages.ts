@@ -361,20 +361,26 @@ ${SHARED_CSS}
 
   var axesBox = document.getElementById("axes");
   Object.keys(data.axes || {}).sort().forEach(function (axis) {
-    data.axes[axis].forEach(function (value) {
-      var button = document.createElement("button");
-      button.className = "pill";
-      button.textContent = axis + ":" + value;
-      button.onclick = function () {
-        if (envState[axis] === value) delete envState[axis]; else envState[axis] = value;
-        axesBox.querySelectorAll("button").forEach(function (candidate) {
-          var parts = candidate.textContent.split(":");
-          candidate.classList.toggle("active", envState[parts[0]] === parts[1]);
-        });
-        if (currentId) select(currentId);
-      };
-      axesBox.appendChild(button);
-    });
+    var config = data.axes[axis];
+    var fallback = config.default !== undefined ? config.default : config.values[0];
+    var button = document.createElement("button");
+    button.className = "pill";
+    function currentValue() {
+      return envState[axis] !== undefined ? envState[axis] : fallback;
+    }
+    function paint() {
+      button.textContent = axis + ": " + currentValue();
+      button.classList.toggle("active", envState[axis] !== undefined);
+    }
+    button.onclick = function () {
+      var index = config.values.indexOf(currentValue());
+      var next = config.values[(index + 1) % config.values.length];
+      if (next === fallback) delete envState[axis]; else envState[axis] = next;
+      paint();
+      if (currentId) select(currentId);
+    };
+    paint();
+    axesBox.appendChild(button);
   });
 
   runPlayButton.onclick = async function () {
@@ -481,19 +487,22 @@ ${SHARED_CSS}
 
   var axesBox = document.getElementById("axes");
   Object.keys(data.axes || {}).sort().forEach(function (axis) {
-    data.axes[axis].forEach(function (value) {
-      var button = document.createElement("button");
-      button.className = "pill";
-      button.textContent = axis + ":" + value;
-      var key = "env." + axis;
-      if (params.get(key) === value) button.classList.add("active");
-      button.onclick = function () {
-        var next = new URLSearchParams(location.search);
-        if (next.get(key) === value) next.delete(key); else next.set(key, value);
-        location.search = next.toString();
-      };
-      axesBox.appendChild(button);
-    });
+    var config = data.axes[axis];
+    var fallback = config.default !== undefined ? config.default : config.values[0];
+    var key = "env." + axis;
+    var current = params.get(key) !== null ? params.get(key) : fallback;
+    var button = document.createElement("button");
+    button.className = "pill";
+    button.textContent = axis + ": " + current;
+    if (params.get(key) !== null) button.classList.add("active");
+    button.onclick = function () {
+      var index = config.values.indexOf(current);
+      var value = config.values[(index + 1) % config.values.length];
+      var next = new URLSearchParams(location.search);
+      if (value === fallback) next.delete(key); else next.set(key, value);
+      location.search = next.toString();
+    };
+    axesBox.appendChild(button);
   });
 
   var query = params.toString();

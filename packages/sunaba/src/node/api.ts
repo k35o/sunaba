@@ -18,12 +18,7 @@ export const createApiApp = (
     return c.json({ error: error.message }, 500);
   });
 
-  app.get("/__sunaba/api/index", (c) =>
-    c.json({
-      ...commands.listStories(),
-      axes: Object.fromEntries(Object.entries(axes).map(([axis, config]) => [axis, config.values])),
-    }),
-  );
+  app.get("/__sunaba/api/index", (c) => c.json({ ...commands.listStories(), axes }));
 
   app.get("/__sunaba/api/session", (c) =>
     c.json({ ...commands.getStageView(), log: commands.getSessionLog() }),
