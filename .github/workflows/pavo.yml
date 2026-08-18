@@ -1,0 +1,20 @@
+name: Pavo
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+jobs:
+  pavo:
+    if: ${{ github.event_name != 'issue_comment' || startsWith(github.event.comment.body, '/pavo') }}
+    uses: k35o/pavo/.github/workflows/review.yml@df1cc3b17994167b888f27deb11437ceec8be2ca # main
+    with:
+      instructions: default,react,typescript
+      extra_prompt: |
+        AI-native component workbench for React (dev server + MCP tools).
+        pnpm workspace: packages/sunaba is the published package, examples/* are test beds.
+    secrets: inherit
