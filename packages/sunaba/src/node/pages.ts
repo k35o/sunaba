@@ -507,11 +507,31 @@ ${SHARED_CSS}
 
   var query = params.toString();
   var grid = document.getElementById("grid");
+
+  // Only tiles near the viewport stay live. A tile is a full page (modules,
+  // React root, HMR socket), so hundreds of always-on iframes would pile up
+  // memory, CPU (running animations/timers), and websocket connections.
+  var observer = new IntersectionObserver(
+    function (observed) {
+      observed.forEach(function (item) {
+        var frame = item.target.querySelector("iframe");
+        if (item.isIntersecting) {
+          if (frame.dataset.src && frame.src !== frame.dataset.src) {
+            frame.src = frame.dataset.src;
+          }
+        } else if (frame.src && frame.src !== "about:blank") {
+          frame.src = "about:blank";
+        }
+      });
+    },
+    { rootMargin: "600px 0px" },
+  );
+
   entries.forEach(function (entry) {
     var figure = document.createElement("figure");
     var frame = document.createElement("iframe");
-    frame.loading = "lazy";
-    frame.src = "/render/" + entry.id + (query ? "?" + query : "") + "#passive";
+    frame.dataset.src =
+      location.origin + "/render/" + entry.id + (query ? "?" + query : "") + "#passive";
     var caption = document.createElement("figcaption");
     var link = document.createElement("a");
     link.href = "/render/" + entry.id + (query ? "?" + query : "");
@@ -524,6 +544,7 @@ ${SHARED_CSS}
     figure.appendChild(frame);
     figure.appendChild(caption);
     grid.appendChild(figure);
+    observer.observe(figure);
   });
 })();
 </script>
