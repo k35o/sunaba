@@ -69,7 +69,15 @@ const SHARED_CSS = `
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+  .pill.icon { display: inline-flex; align-items: center; padding: 6px 9px; }
+  .pill svg { width: 16px; height: 16px; display: block; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+`;
+
+/** Inline icon templates for well-known axis values; unknown axes fall back to text pills. */
+const AXIS_ICON_TEMPLATES = `
+<template id="icon-theme-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg></template>
+<template id="icon-theme-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></template>
 `;
 
 export const CATALOG_HTML = `<!doctype html>
@@ -218,6 +226,7 @@ ${SHARED_CSS}
   <input id="search" class="search" type="search" placeholder="Filter stories (/)" />
   <nav id="sidebar"></nav>
 </aside>
+${AXIS_ICON_TEMPLATES}
 <main>
   <div class="card">
     <div class="toolbar">
@@ -372,7 +381,18 @@ ${SHARED_CSS}
       return envState[axis] !== undefined ? envState[axis] : fallback;
     }
     function paint() {
-      button.textContent = axis + ": " + currentValue();
+      var value = currentValue();
+      var template = document.getElementById("icon-" + axis + "-" + value);
+      button.replaceChildren();
+      if (template) {
+        button.classList.add("icon");
+        button.appendChild(template.content.firstElementChild.cloneNode(true));
+      } else {
+        button.classList.remove("icon");
+        button.textContent = axis + ": " + value;
+      }
+      button.title = axis + ": " + value;
+      button.setAttribute("aria-label", axis + ": " + value);
       button.classList.toggle("active", envState[axis] !== undefined);
     }
     button.onclick = function () {
@@ -480,6 +500,7 @@ ${SHARED_CSS}
   <span class="sub">gallery — every story at once</span>
   <span class="axes" id="axes"></span>
 </header>
+${AXIS_ICON_TEMPLATES}
 <div class="grid" id="grid"></div>
 <script>
 (async function () {
@@ -496,7 +517,15 @@ ${SHARED_CSS}
     var current = params.get(key) !== null ? params.get(key) : fallback;
     var button = document.createElement("button");
     button.className = "pill";
-    button.textContent = axis + ": " + current;
+    var template = document.getElementById("icon-" + axis + "-" + current);
+    if (template) {
+      button.classList.add("icon");
+      button.appendChild(template.content.firstElementChild.cloneNode(true));
+    } else {
+      button.textContent = axis + ": " + current;
+    }
+    button.title = axis + ": " + current;
+    button.setAttribute("aria-label", axis + ": " + current);
     if (params.get(key) !== null) button.classList.add("active");
     button.onclick = function () {
       var index = config.values.indexOf(current);
