@@ -1,0 +1,20 @@
+{
+  "name": "example-react-basic",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sunaba dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "sunaba": "workspace:*",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}
