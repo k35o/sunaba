@@ -1,10 +1,14 @@
 import { Hono } from "hono";
+import type { EnvAxisConfig } from "../config.ts";
 import type { StoryAddress } from "../protocol/types.ts";
 import { StoryNotFoundError } from "./commands.ts";
 import type { SunabaCommands } from "./commands.ts";
 
 /** HTTP surface over the shared command layer (used by the human UI and CI). */
-export const createApiApp = (commands: SunabaCommands): Hono => {
+export const createApiApp = (
+  commands: SunabaCommands,
+  axes: Record<string, EnvAxisConfig>,
+): Hono => {
   const app = new Hono();
 
   app.onError((error, c) => {
@@ -14,7 +18,12 @@ export const createApiApp = (commands: SunabaCommands): Hono => {
     return c.json({ error: error.message }, 500);
   });
 
-  app.get("/__sunaba/api/index", (c) => c.json(commands.listStories()));
+  app.get("/__sunaba/api/index", (c) =>
+    c.json({
+      ...commands.listStories(),
+      axes: Object.fromEntries(Object.entries(axes).map(([axis, config]) => [axis, config.values])),
+    }),
+  );
 
   app.get("/__sunaba/api/session", (c) =>
     c.json({ ...commands.getStageView(), log: commands.getSessionLog() }),

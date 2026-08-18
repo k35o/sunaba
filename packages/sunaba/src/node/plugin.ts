@@ -7,6 +7,7 @@ import type { Plugin, ViteDevServer } from "vite";
 import { WebSocketServer } from "ws";
 import type { SunabaConfig } from "../config.ts";
 import { RENDER_PATH_PREFIX } from "../protocol/address.ts";
+import { CATALOG_HTML, GALLERY_HTML } from "./pages.ts";
 import type { SessionStore } from "./session.ts";
 
 /**
@@ -90,6 +91,18 @@ export const sunabaPlugin = (options: SunabaPluginOptions): Plugin => {
     },
 
     configureServer(server: ViteDevServer) {
+      // Human pages: catalog top page and the all-at-once gallery. Build-free
+      // placeholders until the real observer UI lands in M2.
+      server.middlewares.use((req, res, next) => {
+        const [path] = (req.url ?? "").split("?");
+        if (req.method === "GET" && (path === "/" || path === "/gallery")) {
+          res.setHeader("content-type", "text/html; charset=utf-8");
+          res.end(path === "/" ? CATALOG_HTML : GALLERY_HTML);
+          return;
+        }
+        next();
+      });
+
       // Stage page: any /render/* URL serves the same HTML; the runtime
       // interprets the address on the client.
       server.middlewares.use((req, res, next) => {

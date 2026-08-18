@@ -76,7 +76,7 @@ export const createSunabaDevServer = async (
     getIndex,
     getDiagnostics: () => diagnostics,
   });
-  const app = createApiApp(commands);
+  const app = createApiApp(commands, config.env);
   registerMcpRoute(app, commands, {
     origin: `http://localhost:${String(port)}`,
     axes: config.env,

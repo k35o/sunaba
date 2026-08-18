@@ -207,16 +207,24 @@ export const mountStage = async (input: StageInput): Promise<void> => {
   const cleanups: VoidFunction[] = [];
   const root = createRoot(rootElement);
 
-  const connection = new StageConnection((message) => {
-    if (message.kind === "stage:select") {
-      void renderAddress(message.address);
-    } else if (message.kind === "stage:runPlay") {
-      void runPlay(message.requestId);
-    }
-  });
+  // Passive pages (e.g. gallery tiles) render their URL but never join the
+  // live-stage session; the fragment keeps this out of the address grammar.
+  const passive = location.hash === "#passive";
+  const connection = passive
+    ? undefined
+    : new StageConnection((message) => {
+        if (message.kind === "stage:select") {
+          void renderAddress(message.address);
+        } else if (message.kind === "stage:runPlay") {
+          void runPlay(message.requestId);
+        }
+      });
+  const send = (message: StageToServerMessage): void => {
+    connection?.send(message);
+  };
 
   const reportError = (error: unknown): void => {
-    connection.send({
+    send({
       kind: "stage:render",
       status: "error",
       error: serializeError(error),
@@ -233,7 +241,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
     const original = console[level].bind(console);
     console[level] = (...parts: unknown[]): void => {
       original(...parts);
-      connection.send({
+      send({
         kind: "stage:console",
         level,
         text: parts.map(String).join(" "),
@@ -257,8 +265,8 @@ export const mountStage = async (input: StageInput): Promise<void> => {
     abortController.abort();
     abortController = new AbortController();
     rootElement.removeAttribute(READY_ATTRIBUTE);
-    connection.send({ kind: "stage:hello", address });
-    connection.send({ kind: "stage:render", status: "pending" });
+    send({ kind: "stage:hello", address });
+    send({ kind: "stage:render", status: "pending" });
     try {
       const shape = await loadStoryModule(input, address);
       const env = resolveEnv(input.env, address.env ?? {});
@@ -316,8 +324,8 @@ export const mountStage = async (input: StageInput): Promise<void> => {
         }),
       ]);
       rootElement.setAttribute(READY_ATTRIBUTE, "1");
-      connection.send({ kind: "stage:render", status: "rendered" });
-      connection.send({
+      send({ kind: "stage:render", status: "rendered" });
+      send({
         kind: "stage:args",
         args: toSnapshotValue(context.args) as JsonObject,
       });
@@ -328,7 +336,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
 
   const runPlay = async (requestId: string): Promise<void> => {
     if (currentStory === undefined || currentContext === undefined) {
-      connection.send({
+      send({
         kind: "stage:play",
         requestId,
         result: { status: "skipped", reason: "no story is mounted" },
@@ -337,7 +345,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
     }
     const play = currentStory.play;
     if (play === undefined) {
-      connection.send({
+      send({
         kind: "stage:play",
         requestId,
         result: { status: "skipped", reason: "story has no play function" },
@@ -355,9 +363,9 @@ export const mountStage = async (input: StageInput): Promise<void> => {
     };
     try {
       await play(playContext);
-      connection.send({ kind: "stage:play", requestId, result: { status: "passed" } });
+      send({ kind: "stage:play", requestId, result: { status: "passed" } });
     } catch (error) {
-      connection.send({
+      send({
         kind: "stage:play",
         requestId,
         result: { status: "failed", error: serializeError(error) },
