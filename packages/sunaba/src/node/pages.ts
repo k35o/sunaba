@@ -223,7 +223,7 @@ ${SHARED_CSS}
     <span class="brand">sunaba</span>
     <a class="gallery" href="/gallery">gallery &rarr;</a>
   </div>
-  <input id="search" class="search" type="search" placeholder="Filter stories (/)" />
+  <input id="search" class="search" type="search" placeholder="Filter stories (/)" aria-label="Filter stories" />
   <nav id="sidebar"></nav>
 </aside>
 ${AXIS_ICON_TEMPLATES}

@@ -56,6 +56,12 @@ export class SessionStore {
         this.stages.delete(socket);
         if (this.stages.size === 0) {
           this.state = { ...this.state, stageConnected: false };
+          // Resolve in-flight plays immediately — the reply will never come,
+          // and callers should not sit out the full timeout.
+          for (const waiter of this.pendingPlays.values()) {
+            waiter({ status: "skipped", reason: "stage disconnected" });
+          }
+          this.pendingPlays.clear();
           this.broadcastSession();
         }
       });

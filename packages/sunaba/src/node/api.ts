@@ -25,8 +25,15 @@ export const createApiApp = (
   );
 
   app.post("/__sunaba/api/select", async (c) => {
-    const address = (await c.req.json()) as StoryAddress;
-    return c.json(commands.select(address, "ui"));
+    const body: unknown = await c.req.json();
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      typeof (body as { story?: unknown }).story !== "string"
+    ) {
+      return c.json({ error: "body must be a StoryAddress with a string `story`" }, 400);
+    }
+    return c.json(commands.select(body as StoryAddress, "ui"));
   });
 
   app.post("/__sunaba/api/play", async (c) => {

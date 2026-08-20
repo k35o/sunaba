@@ -46,8 +46,10 @@ const runDev = async (values: { port?: string; host?: boolean; open?: boolean })
     console.log(`  stage   : ${origin}/render/${first}`);
   }
   if (values.open === true && first !== undefined) {
-    const { exec } = await import("node:child_process");
-    exec(`open ${origin}/render/${first}`);
+    // execFile bypasses the shell: story ids contain raw file paths, which
+    // must never be interpolated into a shell command.
+    const { execFile } = await import("node:child_process");
+    execFile("open", [`${origin}/render/${first}`]);
   }
 };
 
