@@ -1,6 +1,9 @@
 export { addressToUrl, canonicalJson, parseAddress, RENDER_PATH_PREFIX } from "./address.ts";
 export type {
   LogActor,
+  PlayResult,
+  PlayRun,
+  PlayStep,
   ServerToObserverMessage,
   ServerToStageMessage,
   SessionLogEntry,

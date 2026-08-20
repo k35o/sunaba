@@ -37,8 +37,39 @@ export const createApiApp = (
   });
 
   app.post("/__sunaba/api/play", async (c) => {
-    const result = await commands.runPlay("ui");
-    return c.json(result);
+    const run = await commands.runPlay("ui");
+    // Snapshots stay behind /play-run; callers only need the outcome shape.
+    return c.json({
+      ...run.result,
+      runId: run.id,
+      steps: run.steps.map((step) => step.label),
+    });
+  });
+
+  app.get("/__sunaba/api/play-run", (c) => {
+    const id = c.req.query("id");
+    const run = id === undefined ? undefined : commands.getPlayRun(id);
+    if (run === undefined) {
+      return c.json({ error: "unknown play run" }, 404);
+    }
+    return c.json({
+      ...run,
+      steps: run.steps.map((step, index) => ({
+        index,
+        kind: step.kind,
+        label: step.label,
+        hasSnapshot: step.snapshot !== undefined,
+      })),
+    });
+  });
+
+  app.post("/__sunaba/api/show-snapshot", async (c) => {
+    const body = (await c.req.json()) as { runId?: unknown; step?: unknown };
+    if (typeof body.runId !== "string" || typeof body.step !== "number") {
+      return c.json({ error: "body must be { runId: string, step: number }" }, 400);
+    }
+    const shown = commands.showSnapshot(body.runId, body.step);
+    return shown ? c.json({ ok: true }) : c.json({ error: "no snapshot for that step" }, 404);
   });
 
   return app;

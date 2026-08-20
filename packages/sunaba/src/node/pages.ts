@@ -282,6 +282,24 @@ ${SHARED_CSS}
   .logpanel b { color: var(--ink); font-weight: 600; }
   .logpanel .ok { color: var(--accent); font-weight: 600; }
   .logpanel .ng { color: var(--danger); font-weight: 600; }
+  .logpanel .entry.expandable { cursor: pointer; }
+  .logpanel .entry.expandable:hover { color: var(--ink); }
+  .steps { margin: 2px 0 6px 20px; }
+  .steps button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font-size: 1em;
+    padding: 2px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .steps button:hover { background: var(--hover); color: var(--ink); }
+  .steps button:disabled { cursor: default; opacity: 0.55; }
+  .steps button.viewing { background: var(--accent-soft); color: var(--accent-soft-ink); }
 </style>
 </head>
 <body>
@@ -504,9 +522,51 @@ ${AXIS_ICON_TEMPLATES}
 
   // Operation log: play results and every actor's commands, live.
   var logPanel = document.getElementById("logpanel");
+
+  // Play rows expand into their recorded steps; clicking a step replays that
+  // moment's DOM snapshot on the stage ("live" restores the running story).
+  function toggleSteps(row, runId) {
+    var existing = row.nextElementSibling;
+    if (existing && existing.classList.contains("steps")) {
+      existing.remove();
+      return;
+    }
+    fetch("/__sunaba/api/play-run?id=" + encodeURIComponent(runId))
+      .then(function (r) { return r.json(); })
+      .then(function (run) {
+        if (!run.steps) return;
+        var box = document.createElement("div");
+        box.className = "steps";
+        function stepButton(label, stepIndex, enabled) {
+          var button = document.createElement("button");
+          button.textContent = label;
+          button.disabled = !enabled;
+          button.onclick = function () {
+            fetch("/__sunaba/api/show-snapshot", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ runId: runId, step: stepIndex }),
+            });
+            box.querySelectorAll("button").forEach(function (candidate) {
+              candidate.classList.toggle("viewing", candidate === button && stepIndex >= 0);
+            });
+          };
+          box.appendChild(button);
+        }
+        run.steps.forEach(function (step) {
+          var mark = step.kind === "mount" ? "\u25cb " : step.kind === "step" ? "\u25b8 " : "\u2192 ";
+          stepButton(mark + step.label + (step.hasSnapshot ? "" : " (no snapshot)"), step.index, step.hasSnapshot);
+        });
+        stepButton("\u21ba live", -1, true);
+        row.after(box);
+        logPanel.scrollTop = logPanel.scrollHeight;
+      });
+  }
+
   function appendLogEntry(entry) {
     var payload = entry.payload || {};
     var row = document.createElement("div");
+    row.className = "entry";
     row.append(entry.at.slice(11, 19) + " ");
     var actor = document.createElement("b");
     actor.textContent = entry.actor;
@@ -521,6 +581,11 @@ ${AXIS_ICON_TEMPLATES}
     }
     var detail = payload.error || payload.reason || "";
     if (detail) row.append(" — " + (detail.length > 160 ? detail.slice(0, 160) + "…" : detail));
+    if (payload.runId) {
+      row.classList.add("expandable");
+      row.title = "Click to inspect steps";
+      row.onclick = function () { toggleSteps(row, payload.runId); };
+    }
     logPanel.appendChild(row);
     logPanel.scrollTop = logPanel.scrollHeight;
   }

@@ -17,17 +17,35 @@ export type PlayResult =
   | { status: "failed"; error: SerializedError }
   | { status: "skipped"; reason: string };
 
+export type PlayStep = {
+  kind: "mount" | "interaction" | "step";
+  label: string;
+  /** DOM snapshot of the story root right after this step (capped in size). */
+  snapshot?: string;
+};
+
+export type PlayRun = {
+  id: string;
+  at: string;
+  actor: LogActor;
+  story: string;
+  result: PlayResult;
+  steps: PlayStep[];
+};
+
 export type StageToServerMessage =
   | { kind: "stage:hello"; address: StoryAddress }
   | { kind: "stage:render"; status: RenderStatus; error?: SerializedError }
   /** Resolved args snapshot; functions are reported as the string `"[fn]"`. */
   | { kind: "stage:args"; args: JsonObject }
-  | { kind: "stage:play"; requestId: string; result: PlayResult }
+  | { kind: "stage:play"; requestId: string; result: PlayResult; steps?: PlayStep[] }
   | { kind: "stage:console"; level: "log" | "warn" | "error"; text: string };
 
 export type ServerToStageMessage =
   | { kind: "stage:select"; address: StoryAddress }
-  | { kind: "stage:runPlay"; requestId: string };
+  | { kind: "stage:runPlay"; requestId: string }
+  /** Show a recorded snapshot on the stage; null restores the live view. */
+  | { kind: "stage:showSnapshot"; html: string | null };
 
 export type SessionRenderState = {
   status: RenderStatus;

@@ -110,11 +110,13 @@ const createServer = (commands: SunabaCommands, options: McpOptions): McpServer 
         await waitForSettledView(commands);
         view = commands.getStageView();
       }
-      const playResult =
+      const playRun =
+        play === true && view.state.stageConnected ? await commands.runPlay("mcp") : undefined;
+      const playReport =
         play === true
-          ? view.state.stageConnected
-            ? await commands.runPlay("mcp")
-            : { status: "skipped" as const, reason: "no stage is connected" }
+          ? playRun === undefined
+            ? { status: "skipped" as const, reason: "no stage is connected" }
+            : { ...playRun.result, steps: playRun.steps.map((step) => step.label) }
           : undefined;
       const finalView = commands.getStageView();
       return jsonText({
@@ -135,7 +137,7 @@ const createServer = (commands: SunabaCommands, options: McpOptions): McpServer 
           ? {}
           : { args: finalView.state.argsSnapshot }),
         ...(finalView.console.length > 0 ? { console: finalView.console } : {}),
-        ...(playResult === undefined ? {} : { play: playResult }),
+        ...(playReport === undefined ? {} : { play: playReport }),
       });
     },
   );

@@ -1,6 +1,8 @@
 import type { WebSocket } from "ws";
 import type {
   PlayResult,
+  PlayRun,
+  PlayStep,
   ServerToObserverMessage,
   ServerToStageMessage,
   SessionLogEntry,
@@ -17,6 +19,10 @@ import type { JsonObject, StoryAddress, StoryIndex } from "../protocol/types.ts"
 
 export type ConsoleEntry = { level: "log" | "warn" | "error"; text: string };
 
+type PlayReply = { result: PlayResult; steps: PlayStep[] };
+
+const PLAY_RUN_LIMIT = 10;
+
 const CONSOLE_LIMIT = 50;
 const LOG_LIMIT = 200;
 
@@ -30,8 +36,9 @@ export class SessionStore {
   private observers = new Set<WebSocket>();
   private consoleEntries: ConsoleEntry[] = [];
   private log: SessionLogEntry[] = [];
-  private pendingPlays = new Map<string, (result: PlayResult) => void>();
+  private pendingPlays = new Map<string, (reply: PlayReply) => void>();
   private playCounter = 0;
+  private playRuns: PlayRun[] = [];
 
   getState(): SessionState {
     return this.state;
@@ -59,7 +66,7 @@ export class SessionStore {
           // Resolve in-flight plays immediately — the reply will never come,
           // and callers should not sit out the full timeout.
           for (const waiter of this.pendingPlays.values()) {
-            waiter({ status: "skipped", reason: "stage disconnected" });
+            waiter({ result: { status: "skipped", reason: "stage disconnected" }, steps: [] });
           }
           this.pendingPlays.clear();
           this.broadcastSession();
@@ -94,18 +101,30 @@ export class SessionStore {
   }
 
   /** Runs the current story's play function on the live stage. */
-  async runPlay(actor: SessionLogEntry["actor"], timeoutMs = 15_000): Promise<PlayResult> {
+  async runPlay(actor: SessionLogEntry["actor"], timeoutMs = 15_000): Promise<PlayRun> {
+    const at = new Date().toISOString();
+    const story = this.state.address?.story ?? "";
     if (this.stages.size === 0) {
-      return { status: "skipped", reason: "no stage is connected" };
+      return {
+        id: "none",
+        at,
+        actor,
+        story,
+        result: { status: "skipped", reason: "no stage is connected" },
+        steps: [],
+      };
     }
     this.playCounter += 1;
     const requestId = `play_${String(this.playCounter)}`;
-    const result = await new Promise<PlayResult>((resolve) => {
+    const { result, steps } = await new Promise<PlayReply>((resolve) => {
       const timer = setTimeout(() => {
         this.pendingPlays.delete(requestId);
         resolve({
-          status: "failed",
-          error: { message: `play did not finish within ${String(timeoutMs)}ms` },
+          result: {
+            status: "failed",
+            error: { message: `play did not finish within ${String(timeoutMs)}ms` },
+          },
+          steps: [],
         });
       }, timeoutMs);
       this.pendingPlays.set(requestId, (value) => {
@@ -116,14 +135,41 @@ export class SessionStore {
         this.sendToStage(socket, { kind: "stage:runPlay", requestId });
       }
     });
-    const story = this.state.address?.story;
+    const run: PlayRun = { id: requestId, at, actor, story, result, steps };
+    this.playRuns.push(run);
+    if (this.playRuns.length > PLAY_RUN_LIMIT) {
+      this.playRuns.shift();
+    }
     this.appendLog(actor, "play", {
-      ...(story === undefined ? {} : { story }),
+      ...(story === "" ? {} : { story }),
       status: result.status,
+      runId: requestId,
       ...(result.status === "failed" ? { error: result.error.message } : {}),
       ...(result.status === "skipped" ? { reason: result.reason } : {}),
     });
-    return result;
+    return run;
+  }
+
+  getPlayRun(id: string): PlayRun | undefined {
+    return this.playRuns.find((run) => run.id === id);
+  }
+
+  /** Shows a recorded snapshot on the stage; a negative step restores live. */
+  showSnapshot(runId: string, stepIndex: number): boolean {
+    if (stepIndex < 0) {
+      for (const socket of this.stages) {
+        this.sendToStage(socket, { kind: "stage:showSnapshot", html: null });
+      }
+      return true;
+    }
+    const snapshot = this.getPlayRun(runId)?.steps[stepIndex]?.snapshot;
+    if (snapshot === undefined) {
+      return false;
+    }
+    for (const socket of this.stages) {
+      this.sendToStage(socket, { kind: "stage:showSnapshot", html: snapshot });
+    }
+    return true;
   }
 
   broadcastIndex(index: StoryIndex): void {
@@ -169,7 +215,7 @@ export class SessionStore {
       const waiter = this.pendingPlays.get(message.requestId);
       if (waiter !== undefined) {
         this.pendingPlays.delete(message.requestId);
-        waiter(message.result);
+        waiter({ result: message.result, steps: message.steps ?? [] });
       }
       return;
     }

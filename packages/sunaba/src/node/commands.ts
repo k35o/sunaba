@@ -1,5 +1,5 @@
 import { addressToUrl } from "../protocol/address.ts";
-import type { PlayResult, SessionLogEntry, SessionState } from "../protocol/messages.ts";
+import type { PlayRun, SessionLogEntry, SessionState } from "../protocol/messages.ts";
 import type { IndexDiagnostic, StoryAddress, StoryIndex } from "../protocol/types.ts";
 import type { ConsoleEntry, SessionStore } from "./session.ts";
 
@@ -25,7 +25,9 @@ export type SunabaCommands = {
   getStageView: () => StageView;
   getSessionLog: () => SessionLogEntry[];
   select: (address: StoryAddress, actor: SessionLogEntry["actor"]) => StageView;
-  runPlay: (actor: SessionLogEntry["actor"]) => Promise<PlayResult>;
+  runPlay: (actor: SessionLogEntry["actor"]) => Promise<PlayRun>;
+  getPlayRun: (id: string) => PlayRun | undefined;
+  showSnapshot: (runId: string, stepIndex: number) => boolean;
 };
 
 export const createCommands = (store: SessionStore, index: IndexAccess): SunabaCommands => {
@@ -54,6 +56,8 @@ export const createCommands = (store: SessionStore, index: IndexAccess): SunabaC
       return view();
     },
     runPlay: (actor) => store.runPlay(actor),
+    getPlayRun: (id) => store.getPlayRun(id),
+    showSnapshot: (runId, stepIndex) => store.showSnapshot(runId, stepIndex),
   };
 };
 

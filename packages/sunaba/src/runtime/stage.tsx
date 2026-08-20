@@ -4,7 +4,7 @@ import { Component, createElement, StrictMode } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { parseAddress } from "../protocol/address.ts";
-import type { ServerToStageMessage, StageToServerMessage } from "../protocol/messages.ts";
+import type { PlayStep, ServerToStageMessage, StageToServerMessage } from "../protocol/messages.ts";
 import { parseStoryId } from "../protocol/story-id.ts";
 import type { JsonObject, JsonValue, StoryAddress } from "../protocol/types.ts";
 import type {
@@ -242,6 +242,8 @@ export const mountStage = async (input: StageInput): Promise<void> => {
           void renderAddress(message.address);
         } else if (message.kind === "stage:runPlay") {
           void runPlay(message.requestId);
+        } else {
+          showSnapshot(message.html);
         }
       });
   const send = (message: StageToServerMessage): void => {
@@ -287,6 +289,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
   };
 
   const renderAddress = async (address: StoryAddress): Promise<void> => {
+    showSnapshot(null);
     abortController.abort();
     abortController = new AbortController();
     rootElement.removeAttribute(READY_ATTRIBUTE);
@@ -360,6 +363,37 @@ export const mountStage = async (input: StageInput): Promise<void> => {
     }
   };
 
+  // ---- Play review: snapshot overlay -------------------------------------
+  let snapshotOverlay: HTMLDivElement | undefined;
+  const showSnapshot = (html: string | null): void => {
+    if (html === null) {
+      snapshotOverlay?.remove();
+      snapshotOverlay = undefined;
+      return;
+    }
+    if (snapshotOverlay === undefined) {
+      snapshotOverlay = document.createElement("div");
+      snapshotOverlay.style.cssText =
+        "position:fixed;inset:0;overflow:auto;z-index:2147483646;" +
+        `background:${getComputedStyle(document.body).backgroundColor};`;
+      document.body.appendChild(snapshotOverlay);
+    }
+    // The snapshot is this page's own prior DOM (captured from the story
+    // root), so injecting it back verbatim stays within the page's origin
+    // and its already-loaded styles.
+    snapshotOverlay.innerHTML = html;
+  };
+
+  const MAX_SNAPSHOT_LENGTH = 150_000;
+  const MAX_STEPS = 50;
+
+  const describeTarget = (element: Element): string => {
+    const tag = element.tagName.toLowerCase();
+    const label =
+      element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40) ?? "";
+    return label === "" ? tag : `${tag} "${label}"`;
+  };
+
   const runPlay = async (requestId: string): Promise<void> => {
     // Plays run against a fresh mount: a second run on top of the state the
     // first one produced would assert against a dirty tree.
@@ -383,23 +417,65 @@ export const mountStage = async (input: StageInput): Promise<void> => {
       });
       return;
     }
+    const steps: PlayStep[] = [];
+    const record = (kind: PlayStep["kind"], label: string): void => {
+      if (steps.length >= MAX_STEPS) {
+        return;
+      }
+      const step: PlayStep = { kind, label };
+      const html = rootElement.innerHTML;
+      if (html.length <= MAX_SNAPSHOT_LENGTH) {
+        step.snapshot = html;
+      }
+      steps.push(step);
+    };
+
+    const bareUserEvent = userEvent.setup();
+    type ElementAction = (element: Element, ...rest: never[]) => Promise<void>;
+    const wrapElementAction = (name: string, action: ElementAction): ElementAction => {
+      return async (element, ...rest) => {
+        await action.call(bareUserEvent, element, ...rest);
+        record("interaction", `${name} ${describeTarget(element)}`);
+      };
+    };
+    const recordingUserEvent = {
+      ...bareUserEvent,
+      click: wrapElementAction("click", bareUserEvent.click as ElementAction),
+      dblClick: wrapElementAction("dblClick", bareUserEvent.dblClick as ElementAction),
+      hover: wrapElementAction("hover", bareUserEvent.hover as ElementAction),
+      unhover: wrapElementAction("unhover", bareUserEvent.unhover as ElementAction),
+      clear: wrapElementAction("clear", bareUserEvent.clear as ElementAction),
+      type: async (element: Element, text: string, ...rest: never[]) => {
+        await (bareUserEvent.type as (...args: unknown[]) => Promise<void>)(element, text, ...rest);
+        record("interaction", `type "${text.slice(0, 40)}" into ${describeTarget(element)}`);
+      },
+      keyboard: async (text: string) => {
+        await bareUserEvent.keyboard(text);
+        record("interaction", `keyboard "${text.slice(0, 40)}"`);
+      },
+    } as unknown as PlayContext["userEvent"];
+
+    record("mount", "initial render");
     const playContext: PlayContext = {
       ...currentContext,
       canvasElement: rootElement,
       canvas: within(rootElement),
-      userEvent: userEvent.setup(),
-      step: async (_label, body) => {
+      userEvent: recordingUserEvent,
+      step: async (label, body) => {
+        record("step", label);
         await body();
       },
     };
     try {
       await play(playContext);
-      send({ kind: "stage:play", requestId, result: { status: "passed" } });
+      send({ kind: "stage:play", requestId, result: { status: "passed" }, steps });
     } catch (error) {
+      record("step", "failure state");
       send({
         kind: "stage:play",
         requestId,
         result: { status: "failed", error: serializeError(error) },
+        steps,
       });
     }
   };
