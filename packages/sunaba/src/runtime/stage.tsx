@@ -203,6 +203,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
 
   let currentStory: StoryDef | undefined;
   let currentContext: StoryContext | undefined;
+  let currentAddress: StoryAddress | undefined;
   let abortController = new AbortController();
   const cleanups: VoidFunction[] = [];
   const root = createRoot(rootElement);
@@ -333,6 +334,7 @@ export const mountStage = async (input: StageInput): Promise<void> => {
       );
       currentStory = shape.story;
       currentContext = context;
+      currentAddress = address;
       // Double rAF waits for paint, but rAF never fires in occluded tabs —
       // the timeout fallback keeps headless/background stages reporting.
       await Promise.race([
@@ -359,6 +361,11 @@ export const mountStage = async (input: StageInput): Promise<void> => {
   };
 
   const runPlay = async (requestId: string): Promise<void> => {
+    // Plays run against a fresh mount: a second run on top of the state the
+    // first one produced would assert against a dirty tree.
+    if (currentAddress !== undefined) {
+      await renderAddress(currentAddress);
+    }
     if (currentStory === undefined || currentContext === undefined) {
       send({
         kind: "stage:play",

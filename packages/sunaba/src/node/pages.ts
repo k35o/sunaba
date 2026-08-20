@@ -270,6 +270,18 @@ ${SHARED_CSS}
   .dot.rendered { background: var(--accent); }
   .dot.error { background: var(--danger); }
   .statusbar .open { margin-left: auto; }
+  .logpanel {
+    flex: none;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 4px 18px 8px;
+    font-size: 0.78em;
+    color: var(--muted);
+  }
+  .logpanel > div { padding: 2px 0; }
+  .logpanel b { color: var(--ink); font-weight: 600; }
+  .logpanel .ok { color: var(--accent); font-weight: 600; }
+  .logpanel .ng { color: var(--danger); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -292,10 +304,12 @@ ${AXIS_ICON_TEMPLATES}
       <button class="pill" id="reload" title="Remount">&#8635;</button>
     </div>
     <div class="stage-wrap"><iframe id="stage" title="stage"></iframe></div>
+    <div class="logpanel hidden" id="logpanel" aria-label="Operation log"></div>
     <div class="statusbar">
       <span class="dot" id="dot"></span>
       <span id="status">connecting…</span>
       <a href="#" class="open" id="open" target="_blank" rel="noreferrer">open &#8599;</a>
+      <button class="pill" id="log-toggle">log</button>
     </div>
   </div>
 </main>
@@ -488,17 +502,53 @@ ${AXIS_ICON_TEMPLATES}
     window.open(session.permalink || frame.src, "_blank");
   };
 
+  // Operation log: play results and every actor's commands, live.
+  var logPanel = document.getElementById("logpanel");
+  function appendLogEntry(entry) {
+    var payload = entry.payload || {};
+    var row = document.createElement("div");
+    row.append(entry.at.slice(11, 19) + " ");
+    var actor = document.createElement("b");
+    actor.textContent = entry.actor;
+    row.appendChild(actor);
+    var story = payload.story || (payload.address && payload.address.story) || "";
+    row.append(" " + entry.command + (story ? " " + story.split("/").pop() : "") + " ");
+    if (payload.status) {
+      var badge = document.createElement("span");
+      badge.className = payload.status === "passed" ? "ok" : "ng";
+      badge.textContent = payload.status;
+      row.appendChild(badge);
+    }
+    var detail = payload.error || payload.reason || "";
+    if (detail) row.append(" — " + (detail.length > 160 ? detail.slice(0, 160) + "…" : detail));
+    logPanel.appendChild(row);
+    logPanel.scrollTop = logPanel.scrollHeight;
+  }
+  document.getElementById("log-toggle").onclick = function () {
+    logPanel.classList.toggle("hidden");
+    this.classList.toggle("active");
+    logPanel.scrollTop = logPanel.scrollHeight;
+  };
+  fetch("/__sunaba/api/session").then(function (r) { return r.json(); }).then(function (session) {
+    (session.log || []).forEach(appendLogEntry);
+  });
+
   // Observer socket: follow whatever the live stage shows (including
   // agent-driven MCP selects) and surface render status.
   var protocol = location.protocol === "https:" ? "wss:" : "ws:";
   var socket = new WebSocket(protocol + "//" + location.host + "/__sunaba/ws");
   socket.onmessage = function (event) {
     var message = JSON.parse(event.data);
+    if (message.kind === "log") {
+      appendLogEntry(message.entry);
+      return;
+    }
     if (message.kind !== "session") return;
     var state = message.state;
     dot.className = "dot " + state.render.status;
-    statusBox.textContent = state.render.status +
-      (state.render.error ? " — " + state.render.error.message : "");
+    var message = state.render.error ? state.render.error.message : "";
+    if (message.length > 200) message = message.slice(0, 200) + "…";
+    statusBox.textContent = state.render.status + (message ? " — " + message : "");
     if (state.address && state.address.story !== currentId) {
       highlight(state.address.story);
     }

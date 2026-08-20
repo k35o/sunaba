@@ -100,7 +100,6 @@ export class SessionStore {
     }
     this.playCounter += 1;
     const requestId = `play_${String(this.playCounter)}`;
-    this.appendLog(actor, "runPlay");
     const result = await new Promise<PlayResult>((resolve) => {
       const timer = setTimeout(() => {
         this.pendingPlays.delete(requestId);
@@ -116,6 +115,13 @@ export class SessionStore {
       for (const socket of this.stages) {
         this.sendToStage(socket, { kind: "stage:runPlay", requestId });
       }
+    });
+    const story = this.state.address?.story;
+    this.appendLog(actor, "play", {
+      ...(story === undefined ? {} : { story }),
+      status: result.status,
+      ...(result.status === "failed" ? { error: result.error.message } : {}),
+      ...(result.status === "skipped" ? { reason: result.reason } : {}),
     });
     return result;
   }
