@@ -370,7 +370,13 @@ ${AXIS_ICON_TEMPLATES}
     crumb.appendChild(name);
   }
 
+  var stageUp = false;
+
   function highlight(id) {
+    if (id !== currentId) {
+      // Steps and snapshot highlights belong to the previous story's runs.
+      document.querySelectorAll(".steps").forEach(function (box) { box.remove(); });
+    }
     currentId = id;
     document.querySelectorAll("button.story").forEach(function (button) {
       button.classList.toggle("active", button.dataset.id === id);
@@ -383,7 +389,21 @@ ${AXIS_ICON_TEMPLATES}
   function select(id) {
     highlight(id);
     location.hash = "#/story/" + id;
-    frame.src = storyUrl(id);
+    // All selections converge on the shared command layer so every attached
+    // stage (this iframe, other tabs, bare render pages) switches together
+    // and stale snapshot overlays get cleared. The iframe only gets a direct
+    // src on first load (the URL wins) or when no stage is listening.
+    if (!frame.src || !stageUp) {
+      frame.src = storyUrl(id);
+      return;
+    }
+    var address = { story: id };
+    if (Object.keys(envState).length > 0) address.env = Object.assign({}, envState);
+    fetch("/__sunaba/api/select", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(address),
+    });
   }
 
   var sidebar = document.getElementById("sidebar");
@@ -610,6 +630,7 @@ ${AXIS_ICON_TEMPLATES}
     }
     if (message.kind !== "session") return;
     var state = message.state;
+    stageUp = state.stageConnected;
     dot.className = "dot " + state.render.status;
     var message = state.render.error ? state.render.error.message : "";
     if (message.length > 200) message = message.slice(0, 200) + "…";
