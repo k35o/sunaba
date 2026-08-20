@@ -8,6 +8,21 @@
  * borders).
  */
 
+const DARK_TOKENS = `
+      --bg: #15181c;
+      --surface: #1e2329;
+      --ink: #e7e9ec;
+      --muted: #8b95a1;
+      --accent: #14b8a6;
+      --accent-soft: #12332f;
+      --accent-soft-ink: #5eead4;
+      --danger: #ff7a82;
+      --hover: #232930;
+      --input-border: #333b44;
+      --shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+      color-scheme: dark;
+`;
+
 const SHARED_CSS = `
   :root {
     --bg: #f3f4f6;
@@ -24,22 +39,11 @@ const SHARED_CSS = `
     --shadow: 0 10px 30px rgb(25 35 45 / 0.06);
     color-scheme: light;
   }
+  /* Chrome theme: follows the OS unless the user forces one via the toggle. */
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #15181c;
-      --surface: #1e2329;
-      --ink: #e7e9ec;
-      --muted: #8b95a1;
-      --accent: #14b8a6;
-      --accent-soft: #12332f;
-      --accent-soft-ink: #5eead4;
-      --danger: #ff7a82;
-      --hover: #232930;
-      --input-border: #333b44;
-      --shadow: 0 10px 30px rgb(0 0 0 / 0.35);
-      color-scheme: dark;
-    }
+    :root:not([data-theme="light"]) {${DARK_TOKENS}}
   }
+  :root[data-theme="dark"] {${DARK_TOKENS}}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   button, input { font: inherit; color: inherit; }
   body {
@@ -74,6 +78,55 @@ const SHARED_CSS = `
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 `;
 
+/** Applies the stored chrome theme before paint and wires the 3-state toggle. */
+const UI_THEME_HEAD = `<script>
+(function () {
+  var stored = localStorage.getItem("sunaba-ui-theme");
+  if (stored === "light" || stored === "dark") {
+    document.documentElement.dataset.theme = stored;
+  }
+})();
+</script>`;
+
+const UI_THEME_SCRIPT = `
+(function () {
+  var button = document.getElementById("ui-theme");
+  if (!button) return;
+  var MODES = ["auto", "light", "dark"];
+  function current() {
+    var stored = localStorage.getItem("sunaba-ui-theme");
+    return stored === "light" || stored === "dark" ? stored : "auto";
+  }
+  function paint() {
+    var mode = current();
+    button.replaceChildren();
+    var template = document.getElementById("icon-theme-" + mode);
+    if (template) {
+      button.classList.add("icon");
+      button.appendChild(template.content.firstElementChild.cloneNode(true));
+    } else {
+      button.classList.remove("icon");
+      button.textContent = "auto";
+    }
+    button.title = "UI theme: " + mode;
+    button.setAttribute("aria-label", "UI theme: " + mode);
+    button.classList.toggle("active", mode !== "auto");
+  }
+  button.onclick = function () {
+    var next = MODES[(MODES.indexOf(current()) + 1) % MODES.length];
+    if (next === "auto") {
+      localStorage.removeItem("sunaba-ui-theme");
+      delete document.documentElement.dataset.theme;
+    } else {
+      localStorage.setItem("sunaba-ui-theme", next);
+      document.documentElement.dataset.theme = next;
+    }
+    paint();
+  };
+  paint();
+})();
+`;
+
 /** Inline icon templates for well-known axis values; unknown axes fall back to text pills. */
 const AXIS_ICON_TEMPLATES = `
 <template id="icon-theme-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg></template>
@@ -86,6 +139,7 @@ export const CATALOG_HTML = `<!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>sunaba</title>
+${UI_THEME_HEAD}
 <style>
 ${SHARED_CSS}
   body { display: flex; height: 100svh; overflow: hidden; }
@@ -100,6 +154,7 @@ ${SHARED_CSS}
     min-height: 0;
   }
   .side-head { display: flex; align-items: baseline; gap: 10px; padding: 0 8px; }
+  .side-head { align-items: center; }
   .side-head a.gallery { margin-left: auto; font-size: 0.8em; color: var(--muted); }
   .side-head a.gallery:hover { color: var(--accent); }
 
@@ -222,6 +277,7 @@ ${SHARED_CSS}
   <div class="side-head">
     <span class="brand">sunaba</span>
     <a class="gallery" href="/gallery">gallery &rarr;</a>
+    <button class="pill" id="ui-theme"></button>
   </div>
   <input id="search" class="search" type="search" placeholder="Filter stories (/)" aria-label="Filter stories" />
   <nav id="sidebar"></nav>
@@ -452,6 +508,7 @@ ${AXIS_ICON_TEMPLATES}
   var first = fromHash && byId[fromHash] ? fromHash : (entries[0] && entries[0].id);
   if (first) select(first);
 })();
+${UI_THEME_SCRIPT}
 </script>
 </body>
 </html>
@@ -463,6 +520,7 @@ export const GALLERY_HTML = `<!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>sunaba gallery</title>
+${UI_THEME_HEAD}
 <style>
 ${SHARED_CSS}
   header {
@@ -579,6 +637,7 @@ ${AXIS_ICON_TEMPLATES}
     observer.observe(figure);
   });
 })();
+${UI_THEME_SCRIPT}
 </script>
 </body>
 </html>
