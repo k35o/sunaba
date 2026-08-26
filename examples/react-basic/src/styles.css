@@ -1,0 +1,31 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f7f6f3;
+  --fg: #1f2328;
+  --accent: #0a7c6a;
+  --accent-fg: #ffffff;
+  --danger: #b4232c;
+  --border: #d5d2ca;
+  color-scheme: light;
+}
+
+:root.dark {
+  --bg: #14171a;
+  --fg: #e8e6e1;
+  --accent: #2fbf9f;
+  --accent-fg: #06231d;
+  --danger: #ff7a82;
+  --border: #3a4046;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--fg);
+}
