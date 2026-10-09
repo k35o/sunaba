@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@k8o/oxc-config':
-      specifier: 0.4.0
-      version: 0.4.0
+      specifier: 1.0.0
+      version: 1.0.0
     '@types/node':
       specifier: 26.6.4
       version: 26.6.4
@@ -34,7 +34,7 @@ importers:
     devDependencies:
       '@k8o/oxc-config':
         specifier: 'catalog:'
-        version: 0.4.0(vite-plus@0.3.3(@types/node@26.6.4)(typescript@6.0.3))
+        version: 1.0.0(vite-plus@0.3.3(@types/node@26.6.4)(typescript@6.0.3))
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.4
@@ -65,8 +65,8 @@ packages:
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
-  '@k8o/oxc-config@0.4.0':
-    resolution: {integrity: sha512-Y7V5xkghsmCzzqgPzEqWGKiLHVuCeKM0h8Xp3LIx+xYqXb/aqYrtkPoUlaX/NKWH1C+k/MOh++Ylr7iF2Oly2w==}
+  '@k8o/oxc-config@1.0.0':
+    resolution: {integrity: sha512-WIPNmwszJSsXiCflwoGgafVfXI/KuDLDUqaL2Yosr+Dg3/f8xU/LxdRjd9oR45Ms0Ggx+d3DArMX4nM/MTv4iw==}
     engines: {node: '>=24.13.0'}
     peerDependencies:
       '@k8o/html-nest': '>=0.2.0'
@@ -1200,7 +1200,7 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
-  '@k8o/oxc-config@0.4.0(vite-plus@0.3.3(@types/node@26.6.4)(typescript@6.0.3))':
+  '@k8o/oxc-config@1.0.0(vite-plus@0.3.3(@types/node@26.6.4)(typescript@6.0.3))':
     dependencies:
       vite-plus: 0.3.3(@types/node@26.6.4)(typescript@6.0.3)
 
