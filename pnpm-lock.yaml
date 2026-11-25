@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@k8o/oxc-config':
-      specifier: 0.4.0
-      version: 0.4.0
+      specifier: 1.1.0
+      version: 1.1.0
     '@types/node':
       specifier: 26.6.6
       version: 26.6.6
@@ -34,7 +34,7 @@ importers:
     devDependencies:
       '@k8o/oxc-config':
         specifier: 'catalog:'
-        version: 0.4.0(vite-plus@0.3.3(@types/node@26.6.6)(typescript@6.0.3))
+        version: 1.1.0(vite-plus@0.3.3(@types/node@26.6.6)(typescript@6.0.3))
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -65,12 +65,12 @@ packages:
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
 
-  '@k8o/oxc-config@0.4.0':
-    resolution: {integrity: sha512-Y7V5xkghsmCzzqgPzEqWGKiLHVuCeKM0h8Xp3LIx+xYqXb/aqYrtkPoUlaX/NKWH1C+k/MOh++Ylr7iF2Oly2w==}
+  '@k8o/oxc-config@1.1.0':
+    resolution: {integrity: sha512-pEdUKEUSK7h16UbxaJdb9nz0LfJ8DsC2iaCb9L2wzaQaaekr0OuNCM3p3pIWDZo35EB1GHeypKCMRtMNPMVHYA==}
     engines: {node: '>=24.13.0'}
     peerDependencies:
       '@k8o/html-nest': '>=0.2.0'
-      oxlint-tailwindcss: '>=1.12.0'
+      oxlint-tailwindcss: '>=1.14.0'
       vite-plus: '>=1.0.0'
     peerDependenciesMeta:
       '@k8o/html-nest':
@@ -1181,12 +1181,15 @@ packages:
 
   yuku-ast@0.9.5:
     resolution: {integrity: sha512-Q8qW8WwQnN5Cm0ZZivdRIfv0sRLTjUq0YumXJkw8CYN1aCdICH9rk4C47/4n6kA5EqDtlj+F608twoTSV2MwdQ==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-codegen@0.9.5:
     resolution: {integrity: sha512-zGUVyDpSK4b6c9B0yyxi2P0wujn1XZTbG9dCb7d6gyAoP63EMgyLzUwPUvwxPG5jgYqhlI7w+S3oCyapqGr4PA==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-parser@0.9.5:
     resolution: {integrity: sha512-IBnAdNVMswWbJcM7woPluOudectJzFjJ1N8jVRxP9Uq4CIv5hZdBIcdmtRbFDYF/Ph2j2gVup4YJ4N9mh0jYFA==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
 snapshots:
 
@@ -1204,7 +1207,7 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
-  '@k8o/oxc-config@0.4.0(vite-plus@0.3.3(@types/node@26.6.6)(typescript@6.0.3))':
+  '@k8o/oxc-config@1.1.0(vite-plus@0.3.3(@types/node@26.6.6)(typescript@6.0.3))':
     dependencies:
       vite-plus: 0.3.3(@types/node@26.6.6)(typescript@6.0.3)
 
