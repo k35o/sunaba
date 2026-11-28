@@ -1,0 +1,4 @@
+sunaba@0.0.0:
+  dir: packages/sunaba
+  intents:
+    - node-26-13-1
